@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tower of the Last Dealer</title>
+<style>
+body {
+  margin:0;
+  font-family:system-ui,sans-serif;
+  color:#fff;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  height:100vh;
+  background: url('background.png') center/cover no-repeat;
+}
+#menu,#gameContainer,#levelEnd {
+  position:absolute;
+  width:100%;
+  height:100%;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  transition:0.5s;
+}
+#menu {
+  background:rgba(0,0,0,0.0); /* 100% priehľadné pozadie */
+  text-align:center;
+}
+#menu h1 {
+  font-size:48px;
+  color:#ffdd55;
+  margin-bottom:12px;
+  text-shadow:0 0 12px #ffdd55;
+}
+#menu p {
+  font-size:16px;
+  color:#eee;
+  margin:4px 12px;
+  text-shadow:0 0 6px #000;
+}
+#startBtn {
+  margin-top:30px;
+  padding:36px 72px; /* 3x väčšie */
+  font-size:28px;
+  border:none;
+  border-radius:12px;
+  background:rgba(42,75,107,0.5); /* 50% priehľadné */
+  color:#fff;
+  cursor:pointer;
+  text-shadow:0 0 6px #000;
+  box-shadow:0 0 20px rgba(255,255,200,0.5); /* jemné žiarenie */
+  transition:0.3s;
+}
+#startBtn:hover {
+  background:rgba(42,75,107,0.7);
+  box-shadow:0 0 30px rgba(255,255,200,0.8);
+}
+#gameContainer {
+  display:none;
+  flex-direction:column;
+  align-items:center;
+}
+#ui {
+  width:360px;
+}
+#topbar {
+  display:flex;
+  justify-content:space-between;
+  padding:6px 10px;
+  background:rgba(27,27,27,0.5);
+  font-weight:600;
+  font-size:14px;
+  border-radius:6px;
+  box-shadow:0 0 10px rgba(255,255,255,0.2);
+}
+#game {
+  position:relative;
+  width:360px;
+  height:360px;
+  background:radial-gradient(circle,#1c1c1c,#0b0b0b);
+  overflow:hidden;
+  border:2px solid #333;
+  border-radius:10px;
+  margin-top:6px;
+}
+.tower {
+  position:absolute;
+  left:158px;
+  top:158px;
+  width:44px;
+  height:44px;
+  background:#3a3a3a;
+  border:2px solid #151515;
+  border-radius:6px;
+  transition:0.1s;
+}
+.tower::before {
+  content:"";
+  position:absolute;
+  top:-10px;
+  left:-4px;
+  width:52px;
+  height:14px;
+  background:linear-gradient(#6b5b2a,#3b320f);
+  border-radius:6px 6px 0 0;
+}
+.tower::after {
+  content:"";
+  position:absolute;
+  top:-18px;
+  left:16px;
+  width:10px;
+  height:18px;
+  background:#2a2a2a;
+  border-radius:3px;
+}
+.tower.shoot { box-shadow:0 0 16px rgba(255,210,120,.8); }
+.enemy { position:absolute; border-radius:4px; transition:0.05s; }
+.enemy.normal { width:12px; height:12px; background:#6b2a2a; }
+.enemy.fast { width:10px; height:10px; background:#2a6b4a; }
+.enemy.tank { width:15px; height:15px; background:#444; }
+.enemy.boss { width:20px; height:20px; background:#5b2a6b; }
+.bullet { position:absolute; width:6px; height:6px; background:#ffd27a; border-radius:50%; }
+#upgrades { display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; padding:6px; background:rgba(20,20,20,0.5); margin-top:6px; border-radius:8px; box-shadow:0 0 8px rgba(255,255,255,0.2); }
+.upg { background:rgba(34,34,34,0.5); border:1px solid #333; border-radius:8px; padding:6px; font-size:11px; text-align:center; box-shadow:0 0 8px rgba(255,255,255,0.2); }
+.upg button { width:100%; margin-top:4px; border:none; border-radius:6px; padding:4px; background:rgba(68,68,68,0.5); color:#fff; cursor:pointer; }
+.upg button:disabled { opacity:.4; }
+#log { text-align:center; padding:6px; font-size:13px; min-height:18px; }
+#levelEnd { display:none; background:rgba(0,0,0,0.8); color:#fff; text-align:center; font-size:16px; padding:20px; border-radius:12px; box-shadow:0 0 20px rgba(255,255,200,0.5);}
+#levelEnd span { display:block; margin-top:10px; font-size:14px; }
+</style>
+</head>
+<body>
+
+<div id="menu">
+  <h1>Tower of the Last Dealer</h1>
+  <p>V samom srdci sveta stojí posledná veža Dílera, ktorá drží jeho cenný kryštál.</p>
+  <p>Celý rad pikérov, desperátov a zahraničných "profesionálov" sa snaží prebojovať cez smrteľné pasce a môj jonizér.</p>
+  <p>Kto nepadne na mieste, skončí ako ozdoba v mojom čiernom humoristickom múzeu zlyhaní.</p>
+  <p>Veža strieľa zo svojho jonizéru a každý, kto sa približuje, dostane od života len čiaru.</p>
+  <p>Staň sa legendou, alebo skonči v mojom zozname neúspechov.</p>
+  <button id="startBtn">Spustiť hru</button>
+</div>
+
+<div id="gameContainer">
+  <div id="ui">
+    <div id="topbar">
+      <div>❤️ <span id="hp"></span></div>
+      <div>💰 <span id="gold"></span></div>
+      <div>Lv <span id="level"></span></div>
+      <div>⏳ <span id="time"></span></div>
+    </div>
+    <div id="game">
+      <div class="tower"></div>
+    </div>
+    <div id="log"></div>
+    <div id="upgrades"></div>
+  </div>
+</div>
+
+<div id="levelEnd">
+  <div>Ubránil si kryštál.<br>Ale pamätaj, pikér nikdy nespí! Priprav sa na ďalšiu noc.</div>
+  <span id="countdown">6</span>
+</div>
+
+<script>
+// ==== MENU ====
+document.getElementById("startBtn").onclick = () => {
+  document.getElementById("menu").style.display="none";
+  document.getElementById("gameContainer").style.display="flex";
+  startGame();
+};
+
+// ==== GAME VARIABLES ====
+let level=1, gold=60, maxHP=100, hp=100;
+const tower={dmg:4, range:100, fireRate:900, multy:1, lastShot:0};
+const upgrades={dmg:{lvl:1,max:30},range:{lvl:1,max:30},fire:{lvl:1,max:30},multy:{lvl:1,max:30},maxhp:{lvl:1,max:30},regen:{lvl:1,max:30},gold:{lvl:1,max:30}};
+const enemies=[], bullets=[];
+const game=document.getElementById("game");
+const towerEl=document.querySelector(".tower");
+const hpEl=document.getElementById("hp"), goldEl=document.getElementById("gold"), levelEl=document.getElementById("level"), log=document.getElementById("log");
+const timeEl=document.getElementById("time");
+const upgWrap=document.getElementById("upgrades");
+const levelEnd=document.getElementById("levelEnd");
+const countdownEl=document.getElementById("countdown");
+let levelTime=90, levelStart=0, spawnInterval, spawnRate=3000, baseGoldPerKill=2;
+
+// ==== UPGRADES ====
+const upgDefs=[["dmg","Damage"],["range","Range"],["fire","Attack spd"],["multy","Multyshot"],["maxhp","Max HP"],["regen","HP regen"],["gold","Gold per kill"]];
+function cost(lvl){return Math.floor(15*Math.pow(1.25,lvl));}
+function renderUpgrades(){
+  upgWrap.innerHTML="";
+  upgDefs.forEach(([k,name])=>{
+    const u=upgrades[k];
+    const d=document.createElement("div");
+    d.className="upg";
+    let c=k==="gold"?cost(u.lvl)*3:cost(u.lvl);
+    d.innerHTML=`${name}<br>Lv ${u.lvl}/${u.max}<button ${u.lvl>=u.max?"disabled":""}>💰${c}</button>`;
+    d.querySelector("button").onclick=()=>{
+      if(u.lvl>=u.max || gold<c) return;
+      gold-=c; u.lvl++; applyUpgrade(k); renderUpgrades(); updateUI();
+    };
+    upgWrap.appendChild(d);
+  });
+}
+function applyUpgrade(k){
+  if(k==="dmg") tower.dmg++;
+  if(k==="range") tower.range+=10;
+  if(k==="fire") tower.fireRate=Math.max(200,tower.fireRate-50);
+  if(k==="multy") tower.multy++;
+  if(k==="maxhp"){maxHP+=10; hp+=10;}
+  if(k==="gold") baseGoldPerKill++;
+}
+
+// ==== ENEMIES ====
+function spawnEnemy(){
+  const e=document.createElement("div");
+  e.className="enemy normal";
+  e.hp=(25+level*2)*0.3;
+  e.speed=(0.18+level*0.008)*0.6;
+  const a=Math.random()*Math.PI*2;
+  e.x=180+Math.cos(a)*170; e.y=180+Math.sin(a)*170;
+  e.style.left=e.x+"px"; e.style.top=e.y+"px";
+  game.appendChild(e); enemies.push(e);
+}
+
+// ==== SPAWN WAVE ====
+function startWave(){
+  spawnRate=3000;
+  let elapsedSpawn=0, spawnMultiplier=1;
+  levelStart=Date.now();
+  spawnInterval=setInterval(()=>{
+    for(let i=0;i<spawnMultiplier;i++) spawnEnemy();
+    elapsedSpawn+=3;
+    if(elapsedSpawn%10===0){spawnMultiplier*=2;} // každých 10s dvojnásobok
+  },spawnRate);
+  setTimeout(()=>endLevel(),levelTime*1000);
+}
+
+// ==== END LEVEL ====
+function endLevel(){
+  clearInterval(spawnInterval);
+  levelEnd.style.display="flex";
+  let reward=Math.floor(20*Math.pow(1.8,level-1));
+  gold+=reward;
+  let count=6;
+  countdownEl.textContent=count;
+  const countdown=setInterval(()=>{
+    count--; countdownEl.textContent=count;
+    if(count<=0){
+      clearInterval(countdown);
+      levelEnd.style.display="none";
+      level++;
+      startWave();
+    }
+  },1000);
+}
+
+// ==== SHOOT ====
+function shoot(){
+  const now=Date.now();
+  if(now-tower.lastShot<tower.fireRate) return;
+  const targets=[...enemies].sort((a,b)=>Math.hypot(a.x-180,a.y-180)-Math.hypot(b.x-180,b.y-180)).slice(0,tower.multy);
+  targets.forEach(t=>{
+    if(Math.hypot(t.x-180,t.y-180)<=tower.range){
+      const b=document.createElement("div"); b.className="bullet"; b.x=180; b.y=180; b.t=t;
+      game.appendChild(b); bullets.push(b);
+    }
+  });
+  if(targets.length){tower.lastShot=now;towerEl.classList.add("shoot"); setTimeout(()=>towerEl.classList.remove("shoot"),80);}
+}
+
+// ==== LOOP ====
+function loop(){
+  for(let i=enemies.length-1;i>=0;i--){
+    const e=enemies[i];
+    const dx=180-e.x, dy=180-e.y;
+    const d=Math.hypot(dx,dy);
+    e.x+=dx/d*e.speed; e.y+=dy/d*e.speed;
+    e.style.left=e.x+"px"; e.style.top=e.y+"px";
+    if(d<20){hp-=5;if(game.contains(e)) game.removeChild(e); enemies.splice(i,1);}
+  }
+
+  for(let i=bullets.length-1;i>=0;i--){
+    const b=bullets[i];
+    if(!b.t){bullets.splice(i,1); if(game.contains(b)) game.removeChild(b); continue;}
+    const dx=b.t.x-b.x, dy=b.t.y-b.y, d=Math.hypot(dx,dy);
+    b.x+=dx/d*3; b.y+=dy/d*3;
+    b.style.left=b.x+"px"; b.style.top=b.y+"px";
+    if(d<8){
+      b.t.hp-=tower.dmg;
+      if(game.contains(b)) game.removeChild(b);
+      bullets.splice(i,1);
+      if(b.t.hp<=0){
+        gold+=baseGoldPerKill;
+        if(game.contains(b.t)) game.removeChild(b.t);
+        enemies.splice(enemies.indexOf(b.t),1);
+      }
+    }
+  }
+
+  shoot();
+  hp=Math.min(maxHP,hp+0.01*upgrades.regen.lvl);
+  const elapsed=(Date.now()-levelStart)/1000;
+  timeEl.textContent=Math.ceil(levelTime-elapsed);
+  if(hp<=0){alert("Game Over"); location.reload();}
+  updateUI();
+  requestAnimationFrame(loop);
+}
+
+function updateUI(){
+  hpEl.textContent=Math.floor(hp)+"/"+maxHP;
+  goldEl.textContent=gold;
+  levelEl.textContent=level;
+}
+
+// ==== START GAME ====
+function startGame(){
+  renderUpgrades();
+  requestAnimationFrame(loop);
+  startWave();
+}
+</script>
+</body>
+</html>
